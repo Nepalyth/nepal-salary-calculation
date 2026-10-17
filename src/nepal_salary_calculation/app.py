@@ -4,12 +4,27 @@ from __future__ import annotations
 
 import html
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 
+import altair as alt
+import nepali_datetime
 import pandas as pd
 import streamlit as st
 
+from nepal_salary_calculation import dashboard
 from nepal_salary_calculation import tax as t
-from nepal_salary_calculation.tax import format_npr as npr
+from nepal_salary_calculation.tax import format_npr
+
+
+def npr(value: float, decimals: int | None = None) -> str:
+    """Lakh/crore formatted amount. Decimals appear only when the amount has them, unless `decimals` is given."""
+    if decimals is None:
+        decimals = 0 if round(value, 2) == round(value) else 2
+    return format_npr(value, decimals)
+
+
+npr_card = npr
+
 
 SOURCES = [
     (
@@ -19,17 +34,12 @@ SOURCES = [
         "Always the final reference.",
     ),
     (
-        "SalaryTaxNepal.com - Nepal Salary Tax Calculator FY 2083/84",
-        "https://salarytaxnepal.com/",
-        "Reference calculator: slabs, the 1/3-or-5-lakh retirement cap, insurance caps and the SSF 1% waiver.",
-    ),
-    (
         "Tax rate applicable for Natural Person FY 2083-84 (RSA, chartered accountants)",
         "https://www.rsa.com.np/wp-content/uploads/2026/06/Natural-Person-Taxation-2083-84.pdf",
         "Summary of the IRD slabs and the list of allowed deductions.",
     ),
     (
-        "Nepal Income Tax Slabs 2083/84 guide (Bipin Sharma)",
+        "Nepal Income Tax Slabs 2083/84 guide",
         "https://bipinsharma.info.np/research/nepal-income-tax-guide/",
         "Explains the common slab structure, deductions vs. rebates and how TDS works.",
     ),
@@ -111,6 +121,15 @@ div[data-testid="stDownloadButton"] button { border-radius: 999px; background: #
   border-left: 5px solid #C8102E; box-shadow: 0 3px 12px rgba(42,26,20,.08); }
 [data-testid="stMetricLabel"] p { color: #6b5148; font-weight: 600; }
 [data-testid="stMetricValue"] { color: #2A1A14; font-weight: 700; }
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] > div { overflow: visible !important; text-overflow: clip !important;
+  white-space: normal !important; overflow-wrap: anywhere; font-size: clamp(1.4rem, 2.2vw, 2.25rem); }
+/* Cards three-across inside a half-width column (What if…): keep each number on one line */
+[data-testid="stColumn"] [data-testid="stColumn"] [data-testid="stMetric"] { padding: 10px 10px 10px 12px; }
+[data-testid="stColumn"] [data-testid="stColumn"] [data-testid="stMetricValue"],
+[data-testid="stColumn"] [data-testid="stColumn"] [data-testid="stMetricValue"] > div {
+  white-space: nowrap !important; overflow-wrap: normal; font-size: clamp(1rem, 1.55vw, 1.6rem); }
+[data-testid="stColumn"] [data-testid="stColumn"] [data-testid="stMetricLabel"] p { font-size: .82rem; }
+[data-testid="stColumn"] [data-testid="stColumn"] [data-testid="stMetricDelta"] { font-size: .78rem; }
 
 button[data-baseweb="tab"] { font-weight: 600; font-size: 1.02rem; }
 button[data-baseweb="tab"][aria-selected="true"] { color: #C8102E; }
@@ -164,6 +183,61 @@ div[data-baseweb="tab-highlight"] { background-color: #C8102E !important; height
 .pchips { margin: 2px 0 10px; }
 .pchip { display: inline-block; margin: 0 8px 6px 0; padding: 3px 14px; border-radius: 999px; background: #FFF3D6;
   border: 1px solid #e6cf9f; color: #6b3a00; font-size: .88rem; font-weight: 600; }
+
+/* Glass theme: translucent, blurred surfaces over a colourful fixed backdrop */
+.stApp { background:
+  radial-gradient(520px circle at 8% 12%, rgba(200,16,46,.28), transparent 70%),
+  radial-gradient(620px circle at 92% 8%, rgba(0,56,147,.26), transparent 70%),
+  radial-gradient(560px circle at 78% 88%, rgba(232,163,23,.30), transparent 70%),
+  radial-gradient(480px circle at 12% 90%, rgba(0,56,147,.18), transparent 70%),
+  linear-gradient(135deg, #FFF4E0 0%, #FBE7EC 50%, #E6EEFF 100%); background-attachment: fixed; }
+.np-nav { background: rgba(255,255,255,.55); backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%); border-bottom: 1px solid rgba(255,255,255,.7);
+  box-shadow: 0 8px 32px rgba(31,38,135,.12), inset 0 -2px 0 rgba(200,16,46,.55); }
+.np-nav .links a { background: transparent; }
+.np-nav .links a.cta { background: rgba(0,56,147,.9); box-shadow: 0 4px 14px rgba(0,56,147,.35); }
+.np-hero { background: linear-gradient(120deg, rgba(142,12,32,.88) 0%, rgba(200,16,46,.8) 45%, rgba(0,56,147,.85) 120%);
+  border: 1px solid rgba(255,255,255,.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(142,12,32,.28), inset 0 1px 0 rgba(255,255,255,.5); }
+.np-hero .chip { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.np-hero .go { background: rgba(255,215,122,.92); backdrop-filter: blur(8px); }
+.sec .num { background: rgba(200,16,46,.88); border: 1px solid rgba(255,255,255,.6);
+  box-shadow: 0 6px 18px rgba(200,16,46,.35), inset 0 1px 0 rgba(255,255,255,.5); }
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"] .card-t),
+[data-testid="stMetric"], .slip, .sheet-wrap {
+  background: rgba(255,255,255,.45) !important; border: 1px solid rgba(255,255,255,.7);
+  backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+  box-shadow: 0 8px 32px rgba(31,38,135,.12), inset 0 1px 0 rgba(255,255,255,.8); }
+[data-testid="stMetric"] { border-left: 5px solid rgba(200,16,46,.85); }
+.card-t .ic { background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.8); }
+div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] > div, textarea,
+div:has(> input[type="text"]), div:has(> input[type="number"]), [data-testid="stNumberInputContainer"] {
+  background: rgba(255,255,255,.5) !important; border-radius: 10px; }
+div:has(> input[type="text"]), div:has(> input[type="number"]), div[data-baseweb="select"] > div {
+  border: 1px solid rgba(255,255,255,.8) !important; box-shadow: inset 0 1px 3px rgba(31,38,135,.08); }
+div[data-baseweb="select"] > div > div { background: transparent !important; }
+div[data-testid="stButton"] button { background: rgba(255,255,255,.55); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); box-shadow: 0 4px 14px rgba(200,16,46,.12); }
+div[data-testid="stButton"] button:hover { background: rgba(200,16,46,.9); }
+div[data-testid="stDownloadButton"] button { background: rgba(0,56,147,.9); box-shadow: 0 4px 14px rgba(0,56,147,.3); }
+[data-testid="stExpander"] details { background: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.7);
+  border-radius: 14px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 6px 24px rgba(31,38,135,.10); }
+.slip-foot, .formula { background: rgba(255,243,214,.6); }
+.slip td, .sheet th, .sheet td { border-bottom-color: rgba(230,207,159,.45); }
+.sheet th:first-child, .sheet td:first-child { background: rgba(255,255,255,.9); }
+.sheet thead th, .sheet thead th:first-child { background: rgba(0,56,147,.92); }
+.sheet tr.grp td { background: rgba(142,12,32,.9); }
+.sheet tr.sum td, .sheet tr.sum td:first-child { background: rgba(255,243,214,.85); }
+.sheet tr.key td, .sheet tr.key td:first-child { background: rgba(255,245,246,.85); }
+.sheet td.fc { background: rgba(255,226,160,.28); color: #5b4630; font-style: italic; }
+.sheet td.fc1, .sheet thead th.fc1 { border-left: 2px dashed #E8A317; }
+.sheet tr.sum td.fc, .sheet tr.key td.fc { background: rgba(255,226,160,.5); }
+.pchip { background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.8);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.np-foot { background: rgba(42,26,20,.78); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,.2); }
 </style>
 """
 
@@ -176,6 +250,7 @@ HERO = """
 <a href="#payslip" target="_self">Pay slip</a>
 <a href="#forecast" target="_self">Forecast</a>
 <a href="#tds" target="_self">TDS</a>
+<a href="#insights" target="_self">Dashboard</a>
 <a href="#rules" target="_self">Rules &amp; sources</a>
 <a class="cta" href="#calculator" target="_self">Start</a>
 </div>
@@ -201,12 +276,15 @@ HERO = """
 FOOTER = """
 <div class="np-foot">
 <div class="ne">नेपाल तलब गणक</div>
-<div>Estimates for planning only. Rates from <a href="https://ird.gov.np/" target="_blank">IRD Nepal</a> and
-<a href="https://salarytaxnepal.com/" target="_blank">SalaryTaxNepal</a>. Nothing you enter leaves this page.</div>
+<div>Estimates for planning only. Rates from <a href="https://ird.gov.np/" target="_blank">IRD Nepal</a>. Nothing you enter leaves this page.</div>
 </div>
 """
 
+PAYMENT_KEYS = ("incentive", "festival", "encash")
+PaymentRows = list[tuple[float, list[int]]]
+
 DEFAULTS = {
+    **{f"{k}_ids": [0] for k in PAYMENT_KEYS},
     "basic": None,
     "allowance": None,
     "incentive": None,
@@ -233,6 +311,7 @@ DEFAULTS = {
 }
 
 SAMPLE = {
+    **{f"{k}_ids": [0] for k in PAYMENT_KEYS},
     "basic": 60_000.0,
     "allowance": 40_000.0,
     "incentive": 50_000.0,
@@ -263,16 +342,13 @@ def auto_cit() -> None:
     """Set CIT to the smallest monthly amount that fills the retirement deduction cap."""
     ss = st.session_state
 
-    def months(key: str) -> list[int]:
-        return list(range(12)) if ss.get(f"{key}_every") else list(ss.get(f"{key}_months", []))
-
     entries = [
         t.MonthEntry(
             basic_salary=ss["basic"] or 0.0,
             allowance=ss["allowance"] or 0.0,
-            project_incentive=(ss["incentive"] or 0.0) if m in months("incentive") else 0.0,
-            festival_allowance=(ss["festival"] or 0.0) if m in months("festival") else 0.0,
-            leave_encashment=(ss["encash"] or 0.0) if m in months("encash") else 0.0,
+            project_incentive=amount_in_month(payment_rows("incentive"), m),
+            festival_allowance=amount_in_month(payment_rows("festival"), m),
+            leave_encashment=amount_in_month(payment_rows("encash"), m),
             retirement_fund=ss["rf"] or 0.0,
         )
         for m in range(12)
@@ -308,25 +384,70 @@ def month_name(m: int) -> str:
 def money_input(label: str, key: str, help_text: str | None = None) -> float:
     """Blank by default (None) and returned as 0.0 so the maths never sees None."""
     value = st.number_input(
-        label, min_value=0.0, step=1000.0, format="%.2f", value=None, placeholder="0", key=key, help=help_text
+        label, min_value=0.0, step=1000.0, format="%.10g", value=None, placeholder="0", key=key, help=help_text
     )
     return float(value or 0.0)
 
 
-def payment(label: str, key: str) -> tuple[float, list[int]]:
-    """A recurring or one-off payment together with the months it is paid in."""
-    amount = money_input(f"{label} (per payment)", key)
-    every = st.checkbox("Paid every month", key=f"{key}_every")
-    if every:
-        return amount, list(range(12))
-    months = st.multiselect(
-        "Paid in month(s)",
-        range(12),
-        format_func=month_name,
-        key=f"{key}_months",
-        placeholder="Choose months",
+def payment_field(key: str, row_id: int) -> str:
+    """Session-state key of a payment row; row 0 keeps the original key."""
+    return key if row_id == 0 else f"{key}_{row_id}"
+
+
+def payment_rows(key: str) -> PaymentRows:
+    """(amount, months) of every row of a payment, read back from the widgets' session state."""
+    ss = st.session_state
+    rows = []
+    for row_id in ss.get(f"{key}_ids", [0]):
+        field = payment_field(key, row_id)
+        months = list(range(12)) if ss.get(f"{field}_every") else list(ss.get(f"{field}_months") or [])
+        rows.append((float(ss.get(field) or 0.0), months))
+    return rows
+
+
+def amount_in_month(rows: PaymentRows, month: int) -> float:
+    return sum(amount for amount, months in rows if month in months)
+
+
+def add_payment_row(key: str) -> None:
+    ids = st.session_state[f"{key}_ids"]
+    st.session_state[f"{key}_ids"] = [*ids, max(ids) + 1]
+
+
+def remove_payment_row(key: str, row_id: int) -> None:
+    st.session_state[f"{key}_ids"] = [i for i in st.session_state[f"{key}_ids"] if i != row_id]
+
+
+def payment(label: str, key: str) -> PaymentRows:
+    """A payment with one or more rows, each with its own amount and the months it is paid in."""
+    ids = st.session_state[f"{key}_ids"]
+    for pos, row_id in enumerate(ids):
+        field = payment_field(key, row_id)
+        with st.container(border=bool(pos)):
+            if pos:
+                head, remove = st.columns([3, 2], vertical_alignment="center")
+                head.markdown(f"**Amount #{pos + 1}**")
+                remove.button("✕ Remove", key=f"{field}_remove", on_click=remove_payment_row, args=(key, row_id), width="stretch")
+            title = f"{label} (per payment)" if len(ids) == 1 else f"{label} #{pos + 1} (per payment)"
+            money_input(title if not pos else "Amount (per payment)", field)
+            every = st.checkbox("Paid every month", key=f"{field}_every")
+            if not every:
+                st.multiselect(
+                    "Paid in month(s)",
+                    range(12),
+                    format_func=month_name,
+                    key=f"{field}_months",
+                    placeholder="Choose months",
+                )
+    st.button(
+        "＋ Add another amount",
+        key=f"{key}_add",
+        on_click=add_payment_row,
+        args=(key,),
+        help=f"Use this when {label.lower()} differs between months, e.g. 20,000 in Mangsir and 35,000 in Magh.",
+        width="stretch",
     )
-    return amount, months
+    return payment_rows(key)
 
 
 def collect_inputs() -> tuple[dict, t.Settings]:
@@ -388,11 +509,11 @@ def collect_inputs() -> tuple[dict, t.Settings]:
         card_title("🎁", "Incentives & one-offs", "Pick the months each payment is received, or tick “every month”")
         p1, p2, p3 = st.columns(3)
         with p1:
-            incentive, incentive_months = payment("Project incentive", "incentive")
+            incentive = payment("Project incentive", "incentive")
         with p2:
-            festival, festival_months = payment("Festival allowance", "festival")
+            festival = payment("Festival allowance", "festival")
         with p3:
-            encash, encash_months = payment("Leave/Extra Encashment", "encash")
+            encash = payment("Leave/Extra Encashment", "encash")
 
     s1, s2, s3 = st.columns(3)
     with s1, st.container(border=True):
@@ -430,9 +551,9 @@ def collect_inputs() -> tuple[dict, t.Settings]:
     base = {
         "basic": basic,
         "allowance": allowance,
-        "incentive": (incentive, incentive_months),
-        "festival": (festival, festival_months),
-        "encash": (encash, encash_months),
+        "incentive": incentive,
+        "festival": festival,
+        "encash": encash,
         "rf": rf,
         "cit": cit,
     }
@@ -472,9 +593,9 @@ def default_table(base: dict) -> pd.DataFrame:
                 "Month": t.MONTHS[m],
                 COLS["basic_salary"]: base["basic"],
                 COLS["allowance"]: base["allowance"],
-                COLS["project_incentive"]: base["incentive"][0] if m in base["incentive"][1] else 0.0,
-                COLS["festival_allowance"]: base["festival"][0] if m in base["festival"][1] else 0.0,
-                COLS["leave_encashment"]: base["encash"][0] if m in base["encash"][1] else 0.0,
+                COLS["project_incentive"]: amount_in_month(base["incentive"], m),
+                COLS["festival_allowance"]: amount_in_month(base["festival"], m),
+                COLS["leave_encashment"]: amount_in_month(base["encash"], m),
                 COLS["cit"]: base["cit"],
                 COLS["retirement_fund"]: base["rf"],
             }
@@ -497,7 +618,7 @@ def month_editor(base: dict) -> list[t.MonthEntry]:
             disabled=["Month"],
             width="stretch",
             column_config={
-                c: st.column_config.NumberColumn(c, min_value=0.0, step=500.0, format="%.2f")
+                c: st.column_config.NumberColumn(c, min_value=0.0, step=500.0, format="%.10g")
                 for c in df.columns
                 if c != "Month"
             },
@@ -644,7 +765,17 @@ def schedule_html(result: t.SalaryResult, selected: int) -> str:
     )
 
 
-def month_picker(label: str, key: str, default: int = 0) -> int:
+NEPAL_TZ = timezone(timedelta(hours=5, minutes=45))
+
+
+def current_month_index() -> int:
+    """Index into `t.MONTHS` (Shrawan = 0) for today's Nepali (BS) month in Nepal time."""
+    today = nepali_datetime.date.from_datetime_date(datetime.now(NEPAL_TZ).date())
+    return (today.month - 4) % 12  # Baisakh is BS month 1, Shrawan is 4
+
+
+def month_picker(label: str, key: str, default: int | None = None) -> int:
+    default = current_month_index() if default is None else default
     choice = st.pills(label, t.MONTHS, selection_mode="single", default=t.MONTHS[default], key=key)
     return t.MONTHS.index(choice) if choice else default
 
@@ -664,7 +795,7 @@ def sheet_html(result: t.SalaryResult, sel: int) -> str:
         out = [f'<tr class="{cls}"><td>{label}</td><td class="ty">{kind}</td>']
         out.append(f"<td>{fmt(annual, blank_zero)}</td>" if annual is not None else '<td class="na">–</td>')
         for j, v in enumerate(months):
-            fc = " fc" if j > sel else ""
+            fc = (" fc fc1" if j == sel + 1 else " fc") if j > sel else ""
             if v is None:
                 out.append(f'<td class="na{fc}">–</td>')
             else:
@@ -687,7 +818,7 @@ def sheet_html(result: t.SalaryResult, sel: int) -> str:
         '<tr class="st"><th></th><th></th>'
         f"<th>as of {t.MONTHS[sel]}</th>"
         + "".join(
-            f'<th class="{"act" if j <= sel else "fc"}">{"Actual" if j <= sel else "Forecast"}</th>' for j in range(12)
+            f'<th class="{"act" if j <= sel else "fc fc1" if j == sel + 1 else "fc"}">{"Actual" if j <= sel else "Forecast"}</th>' for j in range(12)
         )
         + "</tr>"
     )
@@ -758,6 +889,70 @@ def sheet_html(result: t.SalaryResult, sel: int) -> str:
     return f'<div class="sheet-wrap"><table class="sheet"><thead>{head}</thead><tbody>{"".join(body)}</tbody></table></div>'
 
 
+COMPACT_NPR = (
+    "datum.value >= 10000000 ? format(datum.value / 10000000, '.2~f') + ' Cr' : "
+    "datum.value >= 100000 ? format(datum.value / 100000, '.2~f') + ' L' : "
+    "datum.value >= 1000 ? format(datum.value / 1000, '.0~f') + 'k' : datum.value"
+)
+
+
+def monthly_chart(df: pd.DataFrame, selected: str) -> alt.LayerChart:
+    """Stacked bars per month (net pay, other deductions, TDS) with value labels and an average line."""
+    d = df.assign(**{"Other deductions": df["Total deduction"] - df["TDS"]})
+    parts = [("Net paid", "#003893"), ("Other deductions", "#E8A317"), ("TDS", "#C8102E")]
+    long = d.melt(id_vars=["Month", "Gross"], value_vars=[n for n, _ in parts], var_name="Part", value_name="Amount")
+    long = long.assign(order=long["Part"].map({n: i for i, (n, _) in enumerate(parts)}))
+    long["Selected"] = long["Month"] == selected
+    months = list(df["Month"])
+    x = alt.X("Month:N", sort=months, axis=alt.Axis(labelAngle=0, title=None, labelFontSize=12))
+    tooltip = [
+        alt.Tooltip("Month:N"),
+        alt.Tooltip("Part:N", title="Component"),
+        alt.Tooltip("Amount:Q", format=",.0f", title="Amount (NPR)"),
+        alt.Tooltip("Gross:Q", format=",.0f", title="Gross (NPR)"),
+    ]
+    bars = (
+        alt.Chart(long)
+        .mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3)
+        .encode(
+            x=x,
+            y=alt.Y("Amount:Q", stack="zero", title="NPR", axis=alt.Axis(labelExpr=COMPACT_NPR, tickCount=5)),
+            color=alt.Color(
+                "Part:N",
+                sort=[n for n, _ in parts],
+                scale=alt.Scale(domain=[n for n, _ in parts], range=[c for _, c in parts]),
+                legend=alt.Legend(orient="top", title=None, symbolType="square"),
+            ),
+            order=alt.Order("order:Q"),
+            opacity=alt.condition("datum.Selected", alt.value(1), alt.value(0.72)),
+            tooltip=tooltip,
+        )
+    )
+    net_labels = (
+        alt.Chart(d)
+        .mark_text(dy=14, color="white", fontSize=11, fontWeight=600, baseline="top")
+        .transform_calculate(label="format(datum['Net paid'] / 100000, '.2f') + ' L'")
+        .encode(x=x, y=alt.Y("Net paid:Q"), text="label:N", tooltip=alt.value(None))
+    )
+    top_labels = (
+        alt.Chart(d)
+        .mark_text(dy=-6, color="#2A1A14", fontSize=11, baseline="bottom")
+        .transform_calculate(label="'TDS ' + format(datum['TDS'], ',.0f')")
+        .encode(x=x, y=alt.Y("Gross:Q"), text="label:N", tooltip=alt.value(None))
+    )
+    average = alt.Chart(d).mark_rule(color="#2A1A14", strokeDash=[5, 4], opacity=0.55).encode(
+        y=alt.Y("mean(Net paid):Q"), tooltip=alt.value(None)
+    )
+    return (
+        alt.layer(bars, net_labels, top_labels, average)
+        .properties(height=360)
+        .configure_view(stroke=None, fill="transparent")
+        .configure(background="transparent")
+        .configure_axis(grid=True, gridColor="rgba(42,26,20,.10)", domain=False, labelColor="#6b5148", titleColor="#6b5148")
+        .configure_legend(labelFontSize=12)
+    )
+
+
 def tab_payslip(result: t.SalaryResult) -> None:
     month = month_picker("Select pay month", "slip_month")
     st.markdown(slip_html(result.slips[month], result.settings), unsafe_allow_html=True)
@@ -771,17 +966,21 @@ def tab_payslip(result: t.SalaryResult) -> None:
         file_name=f"nepal-salary-schedule-{t.FISCAL_YEAR.replace('/', '-')}.csv",
         mime="text/csv",
     )
-    chart = df.iloc[:-1].set_index("Month")[["Net paid", "TDS"]]
-    st.bar_chart(chart, color=["#003893", "#C8102E"])
+    st.markdown("### Where each month's pay goes")
+    st.altair_chart(monthly_chart(df.iloc[:-1], t.MONTHS[month]), width="stretch")
+    st.caption(
+        f"Bars add up to gross income. Dashed line = average net pay (NPR {npr(df['Net paid'].iloc[:-1].mean())}). "
+        f"{t.MONTHS[month]} is highlighted; hover a bar for amounts."
+    )
 
 
 def tab_forecast(result: t.SalaryResult) -> None:
     a = result.annual
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Gross annual income", npr(a.gross_income))
-    c2.metric("Taxable income", npr(a.taxable_income))
-    c3.metric("Annual income tax", npr(a.annual_tax), f"{a.effective_rate:.2%} of gross", delta_color="off")
-    c4.metric("Net take-home", npr(result.total_net_pay))
+    c1.metric("Gross annual income", npr_card(a.gross_income))
+    c2.metric("Taxable income", npr_card(a.taxable_income))
+    c3.metric("Annual income tax", npr_card(a.annual_tax), f"{a.effective_rate:.2%} of gross", delta_color="off")
+    c4.metric("Net take-home", npr_card(result.total_net_pay))
 
     es = result.entries
     parts = [
@@ -901,7 +1100,7 @@ def profile_chips(s: t.Settings) -> str:
 def tab_tds(result: t.SalaryResult) -> None:
     st.markdown("### Tax sheet")
     st.markdown(f'<div class="pchips">{profile_chips(result.settings)}</div>', unsafe_allow_html=True)
-    sel = month_picker("Actual payroll up to", "sheet_month", default=2)
+    sel = month_picker("Actual payroll up to", "sheet_month")
     st.markdown(sheet_html(result, sel), unsafe_allow_html=True)
     st.caption(
         f"Months up to {t.MONTHS[sel]} are actual. Later months are projected from the information you entered: "
@@ -978,9 +1177,9 @@ def main() -> None:
         st.info("Enter a basic salary above (or load the sample payslip) to generate your pay slip.")
     else:
         g1, g2, g3 = st.columns(3)
-        g1.metric("Net take-home (year)", npr(result.total_net_pay))
-        g2.metric("Income tax (TDS, year)", npr(result.total_tds))
-        g3.metric("Average net pay / month", npr(result.total_net_pay / 12))
+        g1.metric("Net take-home (year)", npr_card(result.total_net_pay))
+        g2.metric("Income tax (TDS, year)", npr_card(result.total_tds))
+        g3.metric("Average net pay / month", npr_card(result.total_net_pay / 12))
 
     section("payslip", 2, "Pay slip", "तलबी भर्पाई", "Your monthly pay slip, month by month.")
     tab_payslip(result)
@@ -991,7 +1190,10 @@ def main() -> None:
     section("tds", 4, "TDS calculation", "आयकर गणना", "Exactly how your tax and monthly TDS are worked out.")
     tab_tds(result)
 
-    section("rules", 5, "Rules & sources", "नियम र स्रोत", "The FY 2083/84 rules used and where they come from.")
+    section("insights", 5, "Dashboard", "ड्यासबोर्ड", "Charts, insights and what-if scenarios built from your numbers.")
+    dashboard.render(result, card_title)
+
+    section("rules", 6, "Rules & sources", "नियम र स्रोत", "The FY 2083/84 rules used and where they come from.")
     tab_rules()
 
     st.markdown(FOOTER, unsafe_allow_html=True)

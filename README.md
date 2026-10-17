@@ -4,7 +4,7 @@
 income forecast and a step-by-step income-tax (TDS) breakdown for the fiscal year **2083/84 (2026/27)**,
 based on the IRD slabs and SSF-aware.
 
-The app is a single page. The navbar (**Calculator · Pay slip · Forecast · TDS · Rules & sources · Start**)
+The app is a single page. The navbar (**Calculator · Pay slip · Forecast · TDS · Dashboard · Rules & sources · Start**)
 jumps to each numbered section below; **Start** and the hero's *Calculate my salary* button go to the Calculator.
 
 ## Run
@@ -27,7 +27,7 @@ uv sync
 3. Run Streamlit app
 
 ```zsh
-uv run nepal-salary-calculation   # launches the Streamlit app at [http://localhost:8](http://localhost:8501)
+uv run nepal-salary-calculation   # launches the Streamlit app at : http://localhost:8501
 ```
 
 4. Test
@@ -37,7 +37,7 @@ uv run pytest
 ```
 
 Implements the FY 2083/84 slabs for salaried residents (see the *Rules & sources* section in the app).
-Sources: [IRD Nepal](https://ird.gov.np/) and [SalaryTaxNepal](https://salarytaxnepal.com/).
+Source: [IRD Nepal](https://ird.gov.np/).
 Estimates only; verify with IRD and your employer's payroll.
 
 
@@ -52,7 +52,8 @@ Enter what your employer pays you; everything updates instantly. All amounts are
 - **Monthly pay:** basic salary, allowance, CIT deduction and retirement fund / EPF, plus a
   *Minimum for max tax saving* helper for the CIT deduction.
 - **Incentives & one-offs:** project incentive, festival allowance and leave/extra encashment, each paid
-  every month or only in the months you pick.
+  every month or only in the months you pick. Use **＋ Add another amount** when a payment differs between
+  months (e.g. 20,000 in Mangsir and 35,000 in Magh); amounts in the same month add up.
 - **Social Security Fund:** enrolment toggle (11% employee + 20% employer on basic salary) and whether the
   pay slip shows the employer 20% as income and deducts the full 31%.
 - **Other deductions:** annual life and health insurance premiums.
@@ -69,7 +70,7 @@ the amount deposited to your SSF account. Below it:
 
 - **All 12 months** table (Shrawan → Ashadh) with totals per line.
 - **Download schedule (CSV)** button.
-- Bar chart of net paid vs. TDS for every month.
+- Stacked chart of net pay, other deductions and TDS for every month, with the average net pay line.
 
 ![Pay slip](docs/screenshots/payslip.png)
 
@@ -96,7 +97,30 @@ Exactly how your tax and monthly TDS are worked out.
 
 ![Step-by-step calculation](docs/screenshots/step-by-step-tax.png)
 
-> ### 5. Rules & sources — *Rules & sources*
+> ### 5. Dashboard
+
+Insights and interactive charts built from the numbers you entered (all update instantly):
+
+- **View picker:** *Full year* or any single month (Shrawan … Ashadh). The KPI cards, insights, donut and
+  waterfall switch to that month's pay slip, and the month is highlighted in the monthly chart.
+- **KPI cards:** take-home rate, effective tax rate, tax saved by deductions and the tax rate on your next
+  rupee of income (with the room left before the next slab).
+- **Insights:** plain-language observations, e.g. what you keep, how much your deductions save, whether a
+  higher CIT would save more tax, and your highest- and lowest-paid months.
+- **Where gross goes** (donut, with % of gross) and **From gross to take-home** (waterfall, with amount and
+  % of gross on every step). Click a legend item to focus on it, hover for amounts.
+- **Income by month:** stacked income components with your net pay as a line, net pay labelled on every
+  month and the peak month annotated.
+- **Slab chart:** how your taxable income fills each slab, the tax it produces and where you end.
+- **What if…:** a *monthly CIT* slider (tax saved, cash take-home, and where saving stops) and an *extra
+  income* slider (how much of a bonus you keep, and how the tax share steps up at each slab). Both charts
+  annotate your position, the key thresholds and the saving.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+![What if scenarios](docs/screenshots/dashboard_what_if.png)
+
+> ### 6. Rules & sources — *Rules & sources*
 
 The FY 2083/84 rules used and where they come from:
 
