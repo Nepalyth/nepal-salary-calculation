@@ -56,6 +56,7 @@ header[data-testid="stHeader"], [data-testid="stSidebar"], [data-testid="stSideb
   box-shadow: 0 4px 18px rgba(42,26,20,.08); }
 .np-nav a { text-decoration: none; }
 .np-nav .brand { font-family: 'Yatra One', serif; font-size: 1.25rem; color: #C8102E; display: flex; gap: 8px; align-items: center; }
+.np-nav .brand .flag { height: 30px; width: auto; }
 .np-nav .brand small { font-family: 'Mukta', sans-serif; color: #003893; font-size: .8rem; font-weight: 600; }
 .np-nav .links { display: flex; gap: 4px; }
 .np-nav .links a { color: #2A1A14; font-weight: 600; padding: 7px 14px; border-radius: 999px; font-size: .97rem; transition: all .15s; }
@@ -169,7 +170,7 @@ div[data-baseweb="tab-highlight"] { background-color: #C8102E !important; height
 HERO = """
 <div id="top" class="np-anchor"></div>
 <nav class="np-nav">
-<a class="brand" href="#top" target="_self">🏔️ तलब गणक <small>Nepal Salary &amp; TDS</small></a>
+<a class="brand" href="#top" target="_self"><svg class="flag" viewBox="0 0 26 32" role="img" aria-label="Flag of Nepal"><polygon points="1.5,1.5 23.5,15 11.5,15 23.5,30.5 1.5,30.5" fill="#DC143C" stroke="#003893" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="10" r="2" fill="#fff"/><circle cx="7" cy="23.5" r="2.6" fill="#fff"/></svg> तलब गणक <small>Nepal Salary &amp; TDS</small></a>
 <div class="links">
 <a href="#calculator" target="_self">Calculator</a>
 <a href="#payslip" target="_self">Pay slip</a>
