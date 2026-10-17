@@ -96,10 +96,9 @@ ipython_config.py
 # Pipfile.lock
 
 # uv
-#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-# uv.lock
+#   This is an application, so uv.lock and .python-version are committed for reproducibility.
+#   The virtual environment (.venv) is ignored under "Environments" below.
+.uv-cache/
 
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
@@ -152,6 +151,9 @@ activemq-data/
 # Environments
 .env
 .envrc
+.env.*
+!.env.example
+.venv/
 .venv
 env/
 venv/
@@ -217,4 +219,7 @@ marimo/_lsp/
 __marimo__/
 
 # Streamlit
+#   Keep .streamlit/config.toml tracked; ignore secrets and local credentials.
 .streamlit/secrets.toml
+.streamlit/credentials.toml
+**/.streamlit/secrets.toml

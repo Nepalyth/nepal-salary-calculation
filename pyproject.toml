@@ -1,0 +1,24 @@
+[project]
+name = "nepal-salary-calculation"
+version = "0.1.0"
+description = "Nepal salary, pay slip and income-tax (TDS) calculator for FY 2083/84, built with Streamlit."
+readme = "README.md"
+authors = [
+    { name = "Saphall", email = "safalsakha@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.66.0",
+]
+
+[project.scripts]
+nepal-salary-calculation = "nepal_salary_calculation:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
