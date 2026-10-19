@@ -79,6 +79,7 @@ header[data-testid="stHeader"], [data-testid="stSidebar"], [data-testid="stSideb
   background: linear-gradient(120deg, #8E0C20 0%, #C8102E 45%, #003893 120%); color: #fff;
   box-shadow: 0 14px 34px rgba(142,12,32,.3); margin-bottom: 18px; }
 .np-hero h1 { color: #fff !important; font-size: 2.9rem; margin: 0; line-height: 1.1; padding: 0; }
+[data-testid="stHeaderActionElements"] { display: none !important; }
 .np-hero .ne { font-family: 'Yatra One', serif; font-size: 1.45rem; color: #FFD77A; margin-top: 8px; }
 .np-hero p { margin: 12px 0 0; opacity: .94; font-size: 1.1rem; max-width: 560px; }
 .np-hero .chip { display: inline-block; margin: 16px 8px 0 0; padding: 3px 12px; border-radius: 999px;
